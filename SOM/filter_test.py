@@ -6,7 +6,7 @@ Created on Sun Nov 18 21:34:57 2018
 """
 
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 class Filters:
     # Filters leave the size of the data matrix unchanged. For now all operations are restricted to 2D data.
@@ -30,9 +30,6 @@ class Filters:
         return getattr(self, self.kwargs.get('filter'))(self.data,**self.kwargs)
     
     def Median_op (self,data,**kwargs):
-        mid = kwargs['mid']
-        sort_ = np.sort(data, axis=None)
-        element = sort_[mid]
         return np.median(data)
       
     def Median (self,data,**kwargs):
@@ -97,7 +94,7 @@ class Filters:
                     d[j+ind,k+ind] = self.Laplace_op(aux,**kwargs)          
         return d
 
-'''
+
 def loadMNIST(prefix, folder):
     intType = np.dtype('int32').newbyteorder('>')
     nMetaDataBytes = 4 * intType.itemsize
@@ -236,4 +233,3 @@ plt.figure(figsize = (2,2))
 plt.title('Last two added')
 plt.imshow(fin, cmap=plt.get_cmap('gray'))
 plt.show()
-'''
