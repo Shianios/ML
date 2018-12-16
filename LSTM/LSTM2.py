@@ -11,12 +11,12 @@ import numpy as np
 class LSTM2:
     def __init__ (self, inpt, in_size, out_size, mem_size, **kwargs):
         self.input = inpt
-        self.cif = np.zeros((mem_size,1))
-        self.C = np.zeros((mem_size,1))
-        self.L = np.zeros((mem_size,1))
-        self.S = np.zeros((mem_size,1))
-        self.O = np.zeros((out_size,1))
-        self.out = np.zeros((out_size,1))
+        self.cif = np.zeros((mem_size))
+        self.C = np.zeros((mem_size))
+        self.L = np.zeros((mem_size))
+        self.S = np.zeros((mem_size))
+        self.O = np.zeros((out_size))
+        self.out = np.zeros((out_size))
         self.W_c = LSTM2.initialize(mem_size,in_size+out_size)
         d = out_size + in_size + 2*mem_size
         self.W_cif = LSTM2.initialize(mem_size,d)
@@ -44,6 +44,6 @@ class LSTM2:
     def initialize(*shape): 
         #return np.full((shape),0.5)
         #np.random.seed(5)
-        return np.random.normal(0.0, 0.5, shape)
+        return np.random.normal(0.0, 0.3, shape)
     
     
