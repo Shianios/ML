@@ -50,8 +50,8 @@ def loadMNIST(prefix, folder):
 
     return data, labels
 
-trainingImages, trainingLabels = loadMNIST("train", "C:/Users/Loizos/Desktop/assignment/SOM/data")
-testImages, testLabels = loadMNIST("t10k", "C:/Users/Loizos/Desktop/assignment/SOM/data")
+trainingImages, trainingLabels = loadMNIST("train", "C:/Users/Loizos/Desktop/Git/SOM/data")
+testImages, testLabels = loadMNIST("t10k", "C:/Users/Loizos/Desktop/Git/SOM/data")
 
 # To load pretrained map and skip training
 def loadpretrainSOM(name, folder, shp):

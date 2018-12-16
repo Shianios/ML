@@ -19,15 +19,20 @@ class Filters:
                 aux_size = kwargs['size']
                 self.kwargs['size'] = aux_size + int(2.*(float(aux_size)/2. - np.floor(float(aux_size)/2.))-1.0)  
                 # The above line will map all even numbers to the previews odd and odd left unchanged. We restric filters dimensions to odd numbers
+                self.kwargs.update({'mid': int((self.size**2 - 1)/2)})
             else:
                 self.kwargs['size'] = 3
         else: 
             self.kwargs.update({'size': 3})
+            self.kwargs.update({'mid': 4})
   
     def compute (self):
         return getattr(self, self.kwargs.get('filter'))(self.data,**self.kwargs)
     
     def Median_op (self,data,**kwargs):
+        mid = kwargs['mid']
+        sort_ = np.sort(data, axis=None)
+        element = sort_[mid]
         return np.median(data)
       
     def Median (self,data,**kwargs):
@@ -70,7 +75,7 @@ class Filters:
         return d
     
     def Laplace_op (self,data,**kwargs):
-        if 'Laplace_matrix' not in self.aux_dic: # To avoid redeffining the Laplace matrix in a loop
+        if 'Laplace_matrix' not in self.aux_dic: # To avoid redeffining the Sobel matrices in a loop
             a = 1.
             b = 4.
             Laplace = np.array([[0.,a,0.],[a,-b,a],[0.,a,0.]])

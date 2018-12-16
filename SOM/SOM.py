@@ -112,6 +112,7 @@ class SOM:
                 neighb_neurns.append(neighbr)
 
         return neighb_neurns
+    
     def win_neuron(self,W,data):
         diff = W[:,...] - data[...]
         dist = np.empty((diff.shape[0]))
@@ -172,7 +173,7 @@ class SOM:
                 self.dictlist[win_neuron[0]][self.labels[i]]+=1
             else:
                 self.dictlist[win_neuron[0]].update({self.labels[i] : 1})
-        # Get the label with the maximum number
+        # Get the label with the maximum number. We could use frequency statistics, and return result as a probability.
         for i in range (0,self.W.shape[0]):
             max_key = max(self.dictlist[i], key=self.dictlist[i].get)
             self.dictlist[i].update({'max' : max_key})
