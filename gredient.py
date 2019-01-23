@@ -2,7 +2,7 @@
 """
 Created on Tue Jan 15 16:46:34 2019
 
-@author: Loizos
+@author: Loizos Shianios
 """
 # This is not the grad class. We check SymPy's  functionality. There seams to be 
 # a problem with lambdify

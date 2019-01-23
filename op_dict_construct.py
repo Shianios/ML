@@ -2,7 +2,7 @@
 """
 Created on Tue Jan 22 20:29:36 2019
 
-@author: Loizos
+@author: Loizos Shianios
 """
 
 # The switch was constructed to work for any order of layers creation. 
