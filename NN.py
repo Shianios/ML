@@ -93,8 +93,8 @@ class FCN: # Fully Connected Network
         del op_construct
         
     def Print_Arch (self,N_dims):
-        # Print network Hidden layers dims, the complite expression of the outpu, layer shapes and indices 
-        # for Einstein summation. Note if we have a rank 2 tensor operatedwith a rank 1 tensor (vector) 
+        # Print network Hidden layers dims, the complite expression of the output, layer shapes and indices 
+        # for Einstein summation. Note if we have a rank 2 tensor operated with a rank 1 tensor (vector) 
         # the operation is the usual matrix multipication.
         print()
         print("Network's Layers' dims:")
