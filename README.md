@@ -1,4 +1,4 @@
-Neural Networks algorithms
+**Neural Networks algorithms**
 
 This work started with the aim to understand the internal dynamics of neural networks. So we will try to use as little libraries as possible. The general idea is to develop neural networks in the mathematical language of tensors and escape from the limitations of linear algebra and matrix calculus, in hope of allowing ML algorithms to handle more complex data.
 
