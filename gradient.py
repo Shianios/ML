@@ -4,12 +4,13 @@ Created on Tue Jan 15 16:46:34 2019
 
 @author: Loizos Shianios
 """
-# This is not the grad class. We check SymPy's  functionality. There seams to be 
+# This is not the final grad class. We check SymPy's  functionality. There seams to be 
 # a problem with lambdify
 
 
 import numpy as np
 import sympy as sy
+import re
 #from sympy.parsing.sympy_parser import parse_expr # Hard to parse tensorial expressions.
 #from sympy import Idx
 
@@ -30,6 +31,8 @@ class grads:
         self.ind_dict = {}
         self.operants = {}
         self.act_funcs = {}
+        self.layers_net = {}
+        self.h_layers = {}
         for i in Shapes.keys():
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
@@ -53,17 +56,47 @@ class grads:
         print()
         
         for i in op_dict.keys():
-            operation = op_dict[i]
-            index1 = operation.find('(')
-            act_func = op_dict[i][:index1]
-            self.act_funcs[i] = sy.Function(act_func)
-            op = operation[index1+1:-1]
-            index1 = op.find('W')
-            index2 = op.find('H')
+            ind_n = str(int(i[1:])-1) # Get the numbering of the layers
+            equation = ''
+            oprnt_pos = [m.start() for m in re.finditer(ind_n, op_dict[i])]
+            func = op_dict[i][:oprnt_pos[0]-2]
             
-            print(op)
+            self.act_funcs[i] = sy.Function(func) # For now it seems unnesesary to have a dictionary for the act funcs.
+                                                      # But if we allow them to have variable parameters this might be useful.
+            
+            for ind in range(len(oprnt_pos)-1):
+                op = op_dict[i][oprnt_pos[ind]+1:oprnt_pos[ind+1]-1]
+                if op == '*': 
+                    oprnts = [op_dict[i][oprnt_pos[ind]-1] + ind_n]
+                    oprnts.append(op_dict[i][oprnt_pos[ind+1]-1] + ind_n)
+                    equation += 'sy.tensorproduct(' + 'self.operants[' + "'" + oprnts[ind] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind] + "'" + ']],'
+                    equation +=  'self.operants[' + "'" + oprnts[ind+1] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind+1] + "'" + ']])'
+                    
+                elif op == '+':
+                    if equation:
+                        oprnts = [op_dict[i][oprnt_pos[ind+1]-1] + ind_n]
+                        equation += '+' + 'self.operants[' + "'" + oprnts[0] + "'" + '][self.ind_dict[' + "'" + oprnts[0] + "'" + ']]'
+                    else:
+                        oprnts = [op_dict[i][oprnt_pos[ind+1]-1] + ind_n]
+                        equation += 'self.operants[' + "'" + oprnts[0] + "'" + '][self.ind_dict[' + "'" + oprnts[0] + "'" + ']]' + '+'
+            
+            self.layers_net[i] = eval(equation)
+            
+            self.h_layers[i] = self.act_funcs[i](self.layers_net[i])
+            '''
+            print(func)
+            print(op_dict[i])
+            print(oprnt_pos)
+            print('EG:',i,equation)
+            print('Net:',self.layers_net[i] )
+            '''
+        print('Activation Functions:',self.act_funcs )
         print()
-        print('Activation Functions:',self.act_funcs)
+        print('Layer Net input:',self.layers_net )
+        print()
+        print('Hidden layer ops:',self.h_layers )
+        print()
+        
 gradient = grads(Net_op_dic,Indices,Shapes)
 
 
