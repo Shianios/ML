@@ -89,22 +89,7 @@ class grads:
             
             self.layers_net[i] = eval(equation)
             self.h_layers[i] = self.act_funcs[i](self.layers_net[i])
-            
-            if ind_n != '0':
-                '''print('EQUATION:',equation)
-                index1 = equation.find(',')
-                index2 = equation.find(')',index1)
-                sub = equation[index1:index2]
-                print('SUB',sub)'''
-                
-    
-            '''
-            print(func)
-            print(op_dict[i])
-            print(oprnt_pos)
-            print('EG:',i,equation)
-            print('Net:',self.layers_net[i] )
-            '''
+
         print('Activation Functions:',self.act_funcs )
         print()
         print('Layer Net input:',self.layers_net )
@@ -114,7 +99,7 @@ class grads:
         
         Target = sy.IndexedBase('T',shape=shapes[list(shapes.keys())[-1]])
         Err = Target[self.ind_dict[list(self.ind_dict.keys())[-1]]] - self.h_layers[list(self.h_layers.keys())[-1]]
-        E = Err**2
+        E = Err**2 # In future we will allow both L1 and L2 errors, as well as user defined.
         print('Err = ',Err)
         print('E = ',E)
         print()
