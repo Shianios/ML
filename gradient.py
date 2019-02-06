@@ -13,7 +13,7 @@ import re
 #from sympy.parsing.sympy_parser import parse_expr # Hard to parse tensorial expressions.
 #from sympy import Idx
 
-
+# Example input
 w0 = np.arange(450.).reshape((3,5,6,5))
 h0 = np.arange(30.).reshape((6,5))
 b0 = np.arange(15.).reshape((3,5))
@@ -34,12 +34,15 @@ class grads:
         self.layers_net = {}
         self.h_layers = {}
         self.grads_dict = {}
+        
+        # First create all tensors of the network
         for i in Shapes.keys():
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
         print('operants:',self.operants) 
         print()
         
+        # Create all index structures
         for i in range(len(indices)):
             index1 = indices[i].find(',')
             dict_el = []
@@ -56,6 +59,7 @@ class grads:
         print('Indices:',self.ind_dict)
         print()
         
+        # Get the operation string of each layer convert it to string code and use eval to create sympy elements
         for i in op_dict.keys():
             ind_n = str(int(i[1:])-1) # Get the numbering of the layers
             equation = ''
@@ -90,13 +94,14 @@ class grads:
             self.layers_net[i] = eval(equation)
             self.h_layers[i] = self.act_funcs[i](self.layers_net[i])
 
-        print('Activation Functions:',self.act_funcs )
+        print('Activation Functions:',self.act_funcs)
         print()
-        print('Layer Net input:',self.layers_net )
+        print('Layer Net input:',self.layers_net)
         print()
-        print('Layer ops:',self.h_layers )
+        print('Layer ops:',self.h_layers)
         print()
         
+        # Create the error term
         Target = sy.IndexedBase('T',shape=shapes[list(shapes.keys())[-1]])
         Err = Target[self.ind_dict[list(self.ind_dict.keys())[-1]]] - self.h_layers[list(self.h_layers.keys())[-1]]
         E = Err**2 # In future we will allow both L1 and L2 errors, as well as user defined.
@@ -104,8 +109,24 @@ class grads:
         print('E = ',E)
         print()
         
+        # Differentiate the error with respect to each element we asked its gradient through the g_elements list.
+        # If list is not passed we compute the gradient of all operants exept the H terms.
         if g_elmnts:
             h_keys = list(self.h_layers.keys())[:-1]
+            for k in (h_keys):
+                sub = self.operants[k][self.ind_dict[k]]
+                E = E.subs(sub,self.h_layers[k])
+            for i in g_elmnts:
+                dx = self.operants[i][self.ind_dict[i]]
+                G = sy.diff(E,dx)
+                # Here we need to substitute back H terms and H_net terms, to symblify.
+                self.grads_dict[i] = G
+        else:
+            g_elmnts = list(self.operants.keys())
+            for j in reversed(g_elmnts):
+                if j[0]=='H' : g_elmnts.remove(j)
+            h_keys = list(self.h_layers.keys())[:-1]
+            
             for k in (h_keys):
                 sub = self.operants[k][self.ind_dict[k]]
                 E = E.subs(sub,self.h_layers[k])
