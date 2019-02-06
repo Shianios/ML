@@ -109,7 +109,7 @@ class grads:
         print('E = ',E)
         print()
         
-        # Differentiate the error with respect to each element we asked its gradient through the g_elements list.
+        # Differentiate the error with respect to each element we asked for its gradient, through the g_elements list.
         # If list is not passed we compute the gradient of all operants exept the H terms.
         if g_elmnts:
             h_keys = list(self.h_layers.keys())[:-1]
