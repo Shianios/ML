@@ -127,7 +127,7 @@ class grads:
             for i in g_elmnts:
                 dx = self.operants[i][self.ind_dict[i]]
                 G = sy.diff(E,dx)
-                # Here we need to substitute back Hi terms and H net terms, to symblify.
+                # Here we need to substitute back H terms and H_net terms, to symblify.
                 self.grads_dict[i] = G
         
         for i in self.grads_dict.keys():
