@@ -4,9 +4,7 @@ Created on Tue Jan 15 16:46:34 2019
 
 @author: Loizos Shianios
 """
-# This is not the final grad class. We check SymPy's  functionality. There seams to be 
-# a problem with lambdify
-
+# This is not the final grad class.
 
 import numpy as np
 import sympy as sy
