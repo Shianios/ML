@@ -9,6 +9,7 @@ Created on Tue Jan 15 16:46:34 2019
 import numpy as np
 import sympy as sy
 import re
+
 #from sympy.parsing.sympy_parser import parse_expr # Hard to parse tensorial expressions.
 #from sympy import Idx
 
@@ -23,14 +24,16 @@ t = np.arange(15.).reshape((5,3))
 Net_op_dic = {'H1': 'sigm(W0*H0+B0)', 'H2': 'sigm(W1*H1+B1)'}
 Indices = ['ABab,ab->AB','abAB,AB->ab']
 Shapes = {'H0':(6,5),'W0':(3,5,6,5),'B0':(3,5),'W1':(5,3,3,5),'H1':(3,5),'B1':(5,3),'H2':(5,3)}
+g_elements = ['W0','B0','W1','B1']
 
 class grads:
-    def __init__(self,op_dict,indices,shapes):
+    def __init__(self,op_dict,indices,shapes,*g_elmnts):
         self.ind_dict = {}
         self.operants = {}
         self.act_funcs = {}
         self.layers_net = {}
         self.h_layers = {}
+        self.grads_dict = {}
         for i in Shapes.keys():
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
@@ -65,22 +68,36 @@ class grads:
             for ind in range(len(oprnt_pos)-1):
                 op = op_dict[i][oprnt_pos[ind]+1:oprnt_pos[ind+1]-1]
                 if op == '*': 
-                    oprnts = [op_dict[i][oprnt_pos[ind]-1] + ind_n]
-                    oprnts.append(op_dict[i][oprnt_pos[ind+1]-1] + ind_n)
-                    equation += 'sy.tensorproduct(' + 'self.operants[' + "'" + oprnts[ind] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind] + "'" + ']],'
-                    equation +=  'self.operants[' + "'" + oprnts[ind+1] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind+1] + "'" + ']])'
+                    if equation:
+                        oprnts = [op_dict[i][oprnt_pos[ind]-1] + ind_n]
+                        oprnts.append(op_dict[i][oprnt_pos[ind+1]-1] + ind_n)
+                        equation += 'sy.tensorproduct(' + 'self.operants[' + "'" + oprnts[0] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[0] + "'" + ']],'
+                        equation +=  'self.operants[' + "'" + oprnts[1] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[1] + "'" + ']])'
+                    else:
+                        oprnts = [op_dict[i][oprnt_pos[ind]-1] + ind_n]
+                        oprnts.append(op_dict[i][oprnt_pos[ind+1]-1] + ind_n)
+                        equation += 'sy.tensorproduct(' + 'self.operants[' + "'" + oprnts[ind] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind] + "'" + ']],'
+                        equation +=  'self.operants[' + "'" + oprnts[ind+1] + "'" + '][' + 'self.ind_dict[' + "'" + oprnts[ind+1] + "'" + ']])'
                     
                 elif op == '+':
                     if equation:
                         oprnts = [op_dict[i][oprnt_pos[ind+1]-1] + ind_n]
                         equation += '+' + 'self.operants[' + "'" + oprnts[0] + "'" + '][self.ind_dict[' + "'" + oprnts[0] + "'" + ']]'
                     else:
-                        oprnts = [op_dict[i][oprnt_pos[ind+1]-1] + ind_n]
+                        oprnts = [op_dict[i][oprnt_pos[ind]-1] + ind_n]
                         equation += 'self.operants[' + "'" + oprnts[0] + "'" + '][self.ind_dict[' + "'" + oprnts[0] + "'" + ']]' + '+'
             
             self.layers_net[i] = eval(equation)
-            
             self.h_layers[i] = self.act_funcs[i](self.layers_net[i])
+            
+            if ind_n != '0':
+                '''print('EQUATION:',equation)
+                index1 = equation.find(',')
+                index2 = equation.find(')',index1)
+                sub = equation[index1:index2]
+                print('SUB',sub)'''
+                
+    
             '''
             print(func)
             print(op_dict[i])
@@ -92,10 +109,33 @@ class grads:
         print()
         print('Layer Net input:',self.layers_net )
         print()
-        print('Hidden layer ops:',self.h_layers )
+        print('Layer ops:',self.h_layers )
         print()
         
-gradient = grads(Net_op_dic,Indices,Shapes)
+        Target = sy.IndexedBase('T',shape=shapes[list(shapes.keys())[-1]])
+        Err = Target[self.ind_dict[list(self.ind_dict.keys())[-1]]] - self.h_layers[list(self.h_layers.keys())[-1]]
+        E = Err**2
+        print('Err = ',Err)
+        print('E = ',E)
+        print()
+        
+        if g_elmnts:
+            h_keys = list(self.h_layers.keys())[:-1]
+            for k in (h_keys):
+                sub = self.operants[k][self.ind_dict[k]]
+                E = E.subs(sub,self.h_layers[k])
+            for i in g_elmnts:
+                dx = self.operants[i][self.ind_dict[i]]
+                G = sy.diff(E,dx)
+                # Here we need to substitute back Hi terms and H net terms, to symblify.
+                self.grads_dict[i] = G
+        
+        for i in self.grads_dict.keys():
+            print(i,':',self.grads_dict[i])
+            print()
+            
+gradient = grads(Net_op_dic,Indices,Shapes,*g_elements)
+
 
 
 # In the class we will convert the following code to meathods to be called and
