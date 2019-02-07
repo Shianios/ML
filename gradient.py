@@ -32,15 +32,13 @@ class grads:
         # must be the same as the H layer structure.
         index1 = indices[0].find(',')
         dict_el = []
-        for j in indices[0][:index1]:dict_el.append(j+str(0))
+        for j in indices[0][:index1] : dict_el.append(j+str(0))
         self.ind_dict["W{0}".format(0)] = dict_el
         index2 = indices[0].find('-')
         dict_el = []
-        for j in indices[0][index1+1:index2]:dict_el.append(j+str(0))
+        for j in indices[0][index1+1:index2] : dict_el.append(j+str(0))
         self.ind_dict["H{0}".format(0)] = dict_el
         dict_el = []
-        for j in indices[0][index2+2:]:dict_el.append(j+str(0))
-        self.ind_dict["B{0}".format(0)] = dict_el
         
         for i in range(1,len(indices)):
             # Get the uncontructed structure of previus W tensor.
@@ -51,19 +49,23 @@ class grads:
             # Find length of uncostruction structure for current W tensor.
             index1 = indices[i].find(',') - len(self.ind_dict["H{0}".format(i)])
             dict_el = []
-            for j in indices[i][:index1]:dict_el.append(j+str(i))
+            for j in indices[i][:index1] : dict_el.append(j+str(i))
             self.ind_dict["W{0}".format(i)] = dict_el + self.ind_dict["H{0}".format(i)]
-            dict_el = []
-            for j in indices[i][index2+2:]:dict_el.append(j+str(i))
-            self.ind_dict["B{0}".format(i)] = dict_el
-        # Finally create the output layer index structure from the uncontracted structure of the last W.
-        # Note we do not use the Biases to create the H index structure because, we might not want to
-        # include biases in the network.
+            dict_el = []  
+        # Create the output layer index structure from the uncontracted structure of the last W.
         h_ind = self.ind_dict["H{0}".format(i)]
         w_ind = self.ind_dict["W{0}".format(i)]
         unco_ind = [x for x in w_ind if x not in h_ind]
         self.ind_dict["H{0}".format(i+1)] = unco_ind
+        # Create Bias Tensors. We do not create them in previous loop. First we create a list
+        # of there keys. This is brcause we, might have choosen not to include biases
+        # to all layers, or even any at all.
+        B_key_list = [x for x in Shapes.keys() if x[0] == 'B']
+        for i in B_key_list:
+            j = i[1:]
+            self.ind_dict[i] = self.ind_dict['H'+j]
         
+        print(self.ind_dict)
         # Get the operation string of each layer convert it to string code and use eval to create sympy elements
         for i in op_dict.keys():
             ind_n = str(int(i[1:])-1) # Get the numbering of the layers
