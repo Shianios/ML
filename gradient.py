@@ -132,7 +132,34 @@ class grads:
             G = G.subs(Err,sy.IndexedBase('Err',shape=shapes[h_keys[-1]])[self.ind_dict[h_keys[-1]]])
             self.grads_dict[i] = G
         
-        print('operants:',self.operants) 
+        # We substitute the act. func. derivative terms. For this we will convert the 
+        # equations to python strings and manipulate.
+        for k in self.grads_dict.keys():
+            op_exp = sy.printing.str.sstrrepr(self.grads_dict[k])
+            #print(k,':',op_exp)
+            #print()
+            sub_pos = [m.start() for m in re.finditer('Subs', op_exp)]
+            sub_exp = ''
+
+            for i in reversed(sub_pos):
+                H_pos = op_exp.find('H',i)
+                delim = op_exp.find('_',H_pos)
+                H_key = op_exp[H_pos:delim]
+                ind_end = op_exp.find(']',H_pos)
+                func = sy.printing.str.sstrrepr(self.act_funcs[H_key])
+                oprnt = op_exp[H_pos:ind_end+1]
+                sub_exp = '*' + func + '/' + oprnt + sub_exp
+            op_exp = op_exp[:sub_pos[0]-1] + sub_exp
+            #print(k,':',op_exp)
+            #print('----------')
+            self.grads_dict[k] = op_exp
+        #print('##########')
+        
+        # Finally, we said that the act funcs have parameters. The grads will have terms from this parameters
+        # We need to compute the actual derivative of the activation function and get those terms. For that
+        # we need to parse the actual expression of the act func into sympy and differentiate it. 
+              
+        print('Operants:',self.operants) 
         print()
         print('Indices:',self.ind_dict)
         print()
@@ -150,7 +177,8 @@ class grads:
         for i in self.grads_dict.keys():
             print(i,':',self.grads_dict[i])
             print()
-# ----------------- END OF CLASS -----------------
+            
+# ----------------- END OF CLASS ----------------- #
             
 # Example input
 w0 = np.arange(450.).reshape((3,5,6,5))
