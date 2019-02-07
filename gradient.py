@@ -51,7 +51,6 @@ class grads:
             dict_el = []
             for j in indices[i][:index1] : dict_el.append(j+str(i))
             self.ind_dict["W{0}".format(i)] = dict_el + self.ind_dict["H{0}".format(i)]
-            dict_el = []  
         # Create the output layer index structure from the uncontracted structure of the last W.
         h_ind = self.ind_dict["H{0}".format(i)]
         w_ind = self.ind_dict["W{0}".format(i)]
@@ -62,7 +61,7 @@ class grads:
         # to all layers, or even any at all.
         B_key_list = [x for x in Shapes.keys() if x[0] == 'B']
         for i in B_key_list:
-            j = i[1:]
+            j = str(int(i[1:])+1)
             self.ind_dict[i] = self.ind_dict['H'+j]
         
         print(self.ind_dict)
