@@ -24,11 +24,11 @@ class grads:
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
         
-        # Create all index structures. Create the first layer out side of the loop
+        # Create all index structures. Create the first layer outside of the loop
         # and the remaining inside a loop. This is because the numbering of the 
-        # indices is unconstraned for the fist layer, but it is constrained for the
-        # rest. The H layers, must contineu carring the same index structure, as the
-        # uncontracted structer of the previeus layer, and the W contructed structure
+        # indices is unconstrained for the first layer, but it is constrained for the
+        # rest. The H layers, must continue caring the same index structure, as the
+        # uncontracted structure of the previous layer, and the W contracted structure
         # must be the same as the H layer structure.
         index1 = indices[0].find(',')
         dict_el = []
@@ -57,7 +57,7 @@ class grads:
         unco_ind = [x for x in w_ind if x not in h_ind]
         self.ind_dict["H{0}".format(i+1)] = unco_ind
         # Create Bias Tensors. We do not create them in previous loop. First we create a list
-        # of there keys. This is brcause we, might have choosen not to include biases
+        # of there keys. This is because we, might have chosen not to include biases
         # to all layers, or even any at all.
         B_key_list = [x for x in Shapes.keys() if x[0] == 'B']
         for i in B_key_list:
