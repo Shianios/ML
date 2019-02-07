@@ -10,22 +10,6 @@ import numpy as np
 import sympy as sy
 import re
 
-#from sympy.parsing.sympy_parser import parse_expr # Hard to parse tensorial expressions.
-#from sympy import Idx
-
-# Example input
-w0 = np.arange(450.).reshape((3,5,6,5))
-h0 = np.arange(30.).reshape((6,5))
-b0 = np.arange(15.).reshape((3,5))
-w1 = np.arange(225.).reshape((5,3,3,5))
-h1 = np.arange(15.).reshape((3,5))
-b1 = np.arange(15.).reshape((5,3))
-t = np.arange(15.).reshape((5,3))
-Net_op_dic = {'H1': 'sigm(W0*H0+B0)', 'H2': 'sigm(W1*H1+B1)'}
-Indices = ['ABab,ab->AB','abAB,AB->ab']
-Shapes = {'H0':(6,5),'W0':(3,5,6,5),'B0':(3,5),'W1':(5,3,3,5),'H1':(3,5),'B1':(5,3),'H2':(5,3)}
-g_elements = ['W0','B0','W1','B1']
-
 class grads:
     def __init__(self,op_dict,indices,shapes,*g_elmnts):
         self.ind_dict = {}
@@ -35,29 +19,50 @@ class grads:
         self.h_layers = {}
         self.grads_dict = {}
         
-        # First create all tensors of the network
+        # Create all tensors of the network
         for i in Shapes.keys():
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
-        print('operants:',self.operants) 
-        print()
         
-        # Create all index structures
-        for i in range(len(indices)):
-            index1 = indices[i].find(',')
+        # Create all index structures. Create the first layer out side of the loop
+        # and the remaining inside a loop. This is because the numbering of the 
+        # indices is unconstraned for the fist layer, but it is constrained for the
+        # rest. The H layers, must contineu carring the same index structure, as the
+        # uncontracted structer of the previeus layer, and the W contructed structure
+        # must be the same as the H layer structure.
+        index1 = indices[0].find(',')
+        dict_el = []
+        for j in indices[0][:index1]:dict_el.append(j+str(0))
+        self.ind_dict["W{0}".format(0)] = dict_el
+        index2 = indices[0].find('-')
+        dict_el = []
+        for j in indices[0][index1+1:index2]:dict_el.append(j+str(0))
+        self.ind_dict["H{0}".format(0)] = dict_el
+        dict_el = []
+        for j in indices[0][index2+2:]:dict_el.append(j+str(0))
+        self.ind_dict["B{0}".format(0)] = dict_el
+        
+        for i in range(1,len(indices)):
+            # Get the uncontructed structure of previus W tensor.
+            h_ind = self.ind_dict["H{0}".format(i-1)]
+            w_ind = self.ind_dict["W{0}".format(i-1)]
+            unco_ind = [x for x in w_ind if x not in h_ind]
+            self.ind_dict["H{0}".format(i)] = unco_ind
+            # Find length of uncostruction structure for current W tensor.
+            index1 = indices[i].find(',') - len(self.ind_dict["H{0}".format(i)])
             dict_el = []
             for j in indices[i][:index1]:dict_el.append(j+str(i))
-            self.ind_dict["W{0}".format(i)] = dict_el
-            index2 = indices[i].find('-')
-            dict_el = []
-            for j in indices[i][index1+1:index2]:dict_el.append(j+str(i))
-            self.ind_dict["H{0}".format(i)] = dict_el
+            self.ind_dict["W{0}".format(i)] = dict_el + self.ind_dict["H{0}".format(i)]
             dict_el = []
             for j in indices[i][index2+2:]:dict_el.append(j+str(i))
             self.ind_dict["B{0}".format(i)] = dict_el
-        self.ind_dict["H{0}".format(i+1)]=self.ind_dict["B{0}".format(i)]
-        print('Indices:',self.ind_dict)
-        print()
+        # Finally create the output layer index structure from the uncontracted structure of the last W.
+        # Note we do not use the Biases to create the H index structure because, we might not want to
+        # include biases in the network.
+        h_ind = self.ind_dict["H{0}".format(i)]
+        w_ind = self.ind_dict["W{0}".format(i)]
+        unco_ind = [x for x in w_ind if x not in h_ind]
+        self.ind_dict["H{0}".format(i+1)] = unco_ind
         
         # Get the operation string of each layer convert it to string code and use eval to create sympy elements
         for i in op_dict.keys():
@@ -65,9 +70,9 @@ class grads:
             equation = ''
             oprnt_pos = [m.start() for m in re.finditer(ind_n, op_dict[i])]
             func = op_dict[i][:oprnt_pos[0]-2]
-            
-            self.act_funcs[i] = sy.Function(func) # For now it seems unnesesary to have a dictionary for the act funcs.
-                                                      # But if we allow them to have variable parameters this might be useful.
+            # For now it seems unnesesary to have a dictionary for the act funcs.
+            # But if we allow them to have variable parameters this might be useful.
+            self.act_funcs[i] = sy.Function(func) 
             
             for ind in range(len(oprnt_pos)-1):
                 op = op_dict[i][oprnt_pos[ind]+1:oprnt_pos[ind+1]-1]
@@ -93,53 +98,73 @@ class grads:
             
             self.layers_net[i] = eval(equation)
             self.h_layers[i] = self.act_funcs[i](self.layers_net[i])
-
-        print('Activation Functions:',self.act_funcs)
-        print()
-        print('Layer Net input:',self.layers_net)
-        print()
-        print('Layer ops:',self.h_layers)
-        print()
         
         # Create the error term
         Target = sy.IndexedBase('T',shape=shapes[list(shapes.keys())[-1]])
         Err = Target[self.ind_dict[list(self.ind_dict.keys())[-1]]] - self.h_layers[list(self.h_layers.keys())[-1]]
         E = Err**2 # In future we will allow both L1 and L2 errors, as well as user defined.
-        print('Err = ',Err)
-        print('E = ',E)
-        print()
         
         # Differentiate the error with respect to each element we asked for its gradient, through the g_elements list.
         # If list is not passed we compute the gradient of all operants exept the H terms.
         if g_elmnts:
-            h_keys = list(self.h_layers.keys())[:-1]
-            for k in (h_keys):
-                sub = self.operants[k][self.ind_dict[k]]
-                E = E.subs(sub,self.h_layers[k])
-            for i in g_elmnts:
-                dx = self.operants[i][self.ind_dict[i]]
-                G = sy.diff(E,dx)
-                # Here we need to substitute back H terms and H_net terms, to symblify.
-                self.grads_dict[i] = G
+            h_keys = list(self.h_layers.keys())
         else:
             g_elmnts = list(self.operants.keys())
             for j in reversed(g_elmnts):
                 if j[0]=='H' : g_elmnts.remove(j)
-            h_keys = list(self.h_layers.keys())[:-1]
+            h_keys = list(self.h_layers.keys())
             
+        for k in (h_keys[:-1]):
+            sub = self.operants[k][self.ind_dict[k]]
+            E = E.subs(sub,self.h_layers[k])
+        for i in g_elmnts:
+            dx = self.operants[i][self.ind_dict[i]]
+            G = sy.diff(E,dx)
+            
+            # Here we substitute back H terms H_net terms and the Err term, to symblify.
             for k in (h_keys):
-                sub = self.operants[k][self.ind_dict[k]]
-                E = E.subs(sub,self.h_layers[k])
-            for i in g_elmnts:
-                dx = self.operants[i][self.ind_dict[i]]
-                G = sy.diff(E,dx)
-                # Here we need to substitute back H terms and H_net terms, to symblify.
-                self.grads_dict[i] = G
+                sub = self.h_layers[k]
+                G = G.subs(sub,self.operants[k][self.ind_dict[k]])
+            for k in (h_keys):
+                sub = self.layers_net[k]
+                G = G.subs(sub,sy.IndexedBase((k+'_net'),shape=shapes[k])[self.ind_dict[k]])
+            Err = Err.subs(self.h_layers[h_keys[-1]],self.operants[h_keys[-1]][self.ind_dict[h_keys[-1]]])
+            G = G.subs(Err,sy.IndexedBase('Err',shape=shapes[h_keys[-1]])[self.ind_dict[h_keys[-1]]])
+            self.grads_dict[i] = G
         
+        print('operants:',self.operants) 
+        print()
+        print('Indices:',self.ind_dict)
+        print()
+        print('Activation Functions:',self.act_funcs)
+        print()
+        print('Layer Net input:',self.layers_net)
+        print()
+        print('Layer ops:',self.h_layers)
+        print()        
+        print('Err = ',Err)
+        print()
+        print('E = ',E)
+        print()
+        print('########## Grads ##########')
         for i in self.grads_dict.keys():
             print(i,':',self.grads_dict[i])
             print()
+# ----------------- END OF CLASS -----------------
             
+# Example input
+w0 = np.arange(450.).reshape((3,5,6,5))
+h0 = np.arange(30.).reshape((6,5))
+b0 = np.arange(15.).reshape((3,5))
+w1 = np.arange(225.).reshape((5,3,3,5))
+h1 = np.arange(15.).reshape((3,5))
+b1 = np.arange(15.).reshape((5,3))
+t = np.arange(15.).reshape((5,3))
+Net_op_dic = {'H1': 'sigm(W0*H0+B0)', 'H2': 'sigm(W1*H1+B1)'}
+Indices = ['ABab,ab->AB','abAB,AB->ab']
+Shapes = {'H0':(6,5),'W0':(3,5,6,5),'B0':(3,5),'W1':(5,3,3,5),'H1':(3,5),'B1':(5,3),'H2':(5,3)}
+g_elements = ['W0','B0','W1','B1']
+         
 gradient = grads(Net_op_dic,Indices,Shapes,*g_elements)
 
 
@@ -227,83 +252,4 @@ while op.find('*KroneckerDelta')>0:
     print()
 print('Indices to swap:',kron_del_ind)
 print('............................')
-
-'''
-
-# Testing lambdify modul. not going to be part of the class.
-
-'''
-print()
-print(sy.printing.lambdarepr.lambdarepr(G))
-print()
-print(print_python(G))
-print()
-print(sy.printing.pycode(G))
-'''
-
-'''
-print('############## O ##############')
-print(O)
-print()
-print(type(O.doit()))
-print()
-print(tuple(sy.get_indices(O)))
-print()
-print(sy.get_contraction_structure(O))
-print('###############################')
-print('############## E ##############')
-print(E)
-print()
-print(sy.get_indices(E))
-print()
-print(sy.get_contraction_structure(E))
-print('###############################')
-print('############## g ##############')
-print(G)
-print()
-print(sy.get_indices(G))
-print()
-print(sy.get_contraction_structure(G))
-
-print('#################################################')
-print("############## open g's contraction strc dictionary ##############")
-k = list(sy.get_contraction_structure(G).keys())
-ind = 1 
-for i in k:
-    print(str(ind)+':',i)
-    ind+=1
-
-print()
-print(sy.get_contraction_structure(G)[list(sy.get_contraction_structure(G).keys())[0]])
-print()
-print(sy.get_contraction_structure(G)[list(sy.get_contraction_structure(G).keys())[1]])
-print('#########################################')
-
-ind = ind_w + list(set(ind_h) - set(ind_w)) 
-ind_val = list(w.shape) + list(set(list(h.shape)) - set(list(w.shape)))
-#ind_val[:] = [i - 1 for i in ind_val]
-dims_ = {}
-for i in range(len(ind)):
-    dims_[ind[i]] = ind_val[i]
-    
-print(ind,tuple(ind_val))
-print(ind_w,ind_h)
-print(dims_)
-
-mod = [{'Mul':np.einsum},'numpy']
-f = sy.lambdify((W,H), O.doit(), modules = 'numpy', dummify=False)
-
-#f = theano_function([W,H], [O],  dims= {'W':2,'H':2})
-ind_range_w = [np.mgrid[0:ind_val[0]],np.mgrid[0:ind_val[1]]]
-ind_range_h = [np.mgrid[0:ind_val[2]],np.mgrid[0:ind_val[0]]]
-print(ind_range_w)
-print(ind_range_h)
-print()
-#print(f(w,h))
-
-f = sy.lambdify((sy.DeferredVector('W'),sy.DeferredVector('H'),'a0','b0','c0','d0'),O.doit(),'numpy')
-    
-#f = sy.lambdify((sy.DenseNDimArray('X'),sy.DenseNDimArray('Y'),sy.DenseNDimArray('B')),O.doit(),'numpy')
-
-print(f(w,h,4,2,3,1))
 '''
