@@ -64,7 +64,6 @@ class grads:
             j = str(int(i[1:])+1)
             self.ind_dict[i] = self.ind_dict['H'+j]
         
-        print(self.ind_dict)
         # Get the operation string of each layer convert it to string code and use eval to create sympy elements
         for i in op_dict.keys():
             ind_n = str(int(i[1:])-1) # Get the numbering of the layers
