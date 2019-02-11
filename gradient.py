@@ -35,6 +35,8 @@ class grads:
         
     def get_diffs(self):
         return self.grads_dict
+    def get_indices(self):
+        return self.ind_dict_einsum
         
     def ind_strc(self,indices):
         # Create all index structures. Create the first layer outside of the loop
