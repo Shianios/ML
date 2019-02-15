@@ -188,8 +188,8 @@ class FCN: # Fully Connected Network
 # can be separated by any character or symbol other than intigers, #, ' or " (depenting on which one
 # you ue to enclose the string). So 12:5 and 12.5 and 12>5 and 12a5 and 12 5 will result in the same layer shape.
    
-#args = ['5:4','15','5:4:10:3','6:5']
-args = ['3:5','5:3']
+args = ['5:4','15','5:4:10:3','1:2']
+#args = ['3:5','5:3']
 #args = ['3']
 #args = []
 

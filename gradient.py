@@ -171,7 +171,7 @@ class grads:
                 G = G.subs(self.operants[k][self.ind_dict[k]],self.operants[k])
             self.grads_dict[i] = G
 
-        # We substitute the act. func. and impicite derivative terms. For this we will convert the 
+        # We substitute the act. func. and implicite derivative terms. For this we will convert the 
         # equations to python strings and manipulate.
         for k in self.grads_dict.keys():
             op_exp = sy.printing.str.sstrrepr(self.grads_dict[k])
@@ -180,12 +180,21 @@ class grads:
 
             for i in reversed(sub_pos):
                 H_pos = op_exp.find('H',i)
-                if op_exp[H_pos+1]=='0':
+                if op_exp[H_pos+1]=='0':    # No need for substitution ofthe input layer H0
                     pass
                 else:
                     delim = op_exp.find('_',H_pos)
                     H_key = op_exp[H_pos:delim]
+                    # To avoid getting erronious keys we carry a check that only the layer letter and numbering
+                    # is included in the key.
+                    H_key_aux = H_key[0]
+                    j=1
+                    while j < len(H_key) and H_key[j].isdigit():
+                        H_key_aux += H_key[j]
+                        j +=1
+                    H_key =  H_key_aux
                     ind_end = op_exp.find(',',H_pos)
+
                     func = sy.printing.str.sstrrepr(self.act_funcs[H_key])
                     oprnt = op_exp[H_pos:ind_end]
                     sub_exp = '@d_1' + func + '/' + oprnt + sub_exp # Use @ to designate element wise multiplication.
