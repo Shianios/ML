@@ -5,6 +5,7 @@ Created on Wed Sep 26 18:05:33 2018
 @author: Loizos Shianios
 """
 import numpy as np
+#import pandas as pd
 
 class act_funcs:
     def __init__(self,data,**kwargs):
@@ -92,7 +93,7 @@ class act_funcs:
         elif order == 1:
             d = np.subtract(data,m)
             Exp = np.exp(np.divide(np.multiply(d,d),-a))
-            data = np.divide(np.multiply(-2*s,np.multiply(Exp,d)),a)
+            data = np.divide(np.multiply(-2*a*s,np.multiply(Exp,d)),a)
             del d, Exp
         del s,m,a
         return data
@@ -120,7 +121,7 @@ class act_funcs:
         elif order == 1:
             d = np.subtract(data,m)
             Exp = np.exp(np.divide(np.multiply(d,d),-a))
-            data = np.divide(np.multiply(2*s,np.multiply(Exp,d)),a)
+            data = np.divide(np.multiply(2*a*s,np.multiply(Exp,d)),a)
             del d, Exp
         del s,m,a
         return data
