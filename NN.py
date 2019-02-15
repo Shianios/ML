@@ -174,6 +174,7 @@ class FCN: # Fully Connected Network
         for i in self.Grads.keys():
             print(i,':',self.Grads[i])
         print()
+        print('Returned index structures from grad')
         print(self.Grad_ind)
         print('Network constructed')
         print('############################################')
