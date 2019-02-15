@@ -15,19 +15,21 @@ class FCN: # Fully Connected Network
     # and one to store all the operations that give the results of a layer. Also we create a list of indices
     # needed in Einstein sumation.
     def __init__ (self,data,prnt,*args,**kwargs):
-        self.kwargs = kwargs
-        self.Layers = {}
-        self.indices = []
-        self.op_dict = {}
-        self.g_elements = []
-        N_dims = self.dim_extract(data,args)
-        self.Network_constr(N_dims)
-        self.Op_constr()
-        self.Grads = {}
-        self.Grad_ind = {}
-        self.grads()
-        if prnt is True:self.Print_Arch(N_dims)
-        del N_dims
+        if isinstance (data, np.ndarray): # Add any check here to avoid crushes.
+            self.kwargs = kwargs
+            self.Layers = {}
+            self.indices = []
+            self.op_dict = {}
+            self.g_elements = []
+            N_dims = self.dim_extract(data,args)
+            self.Network_constr(N_dims)
+            self.Op_constr()
+            self.Grads = {}
+            self.Grad_ind = {}
+            self.grads()
+            if prnt is True:self.Print_Arch(N_dims)
+            del N_dims
+        else: print('Data provided is not numpy array')
         
     def dim_extract(self,data,args):    
         # Get shape of the input layer from data. The first index of data is treated as 
