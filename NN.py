@@ -8,6 +8,7 @@ Created on Mon Jan  7 14:33:58 2019
 import numpy as np
 import act_funcs as act_funcs
 import op_dict_construct as dict_con
+import gradient as gr
 
 class FCN: # Fully Connected Network
     # In the construction of the network we create two dictionaries. One to store all layers, weights and biases,
@@ -18,9 +19,13 @@ class FCN: # Fully Connected Network
         self.Layers = {}
         self.indices = []
         self.op_dict = {}
+        self.g_elements = []
         N_dims = self.dim_extract(data,args)
         self.Network_constr(N_dims)
         self.Op_constr()
+        self.Grads = {}
+        self.Grad_ind = {}
+        self.grads()
         if prnt is True:self.Print_Arch(N_dims)
         del N_dims
         
@@ -95,7 +100,7 @@ class FCN: # Fully Connected Network
             For now we only have sigm as activation function. This will chance.
         '''
         for i in self.op_dict.keys():
-            self.op_dict[i] = 'sigm*' + self.op_dict[i]
+            self.op_dict[i] = 'sigm' + self.op_dict[i]
         del op_construct
         
     
@@ -137,6 +142,15 @@ class FCN: # Fully Connected Network
                     np.einsum(self.indices[i],self.Layers["W{0}".format(i)],self.Layers["H{0}".format(i)]) + self.Layers["B{0}".format(i)],
                     **{"func":'sigmoid',"order":0,"params":{}}).compute()
      
+    def grads(self):
+        shapes = {}
+        for k in self.Layers.keys():
+            shapes[k] = self.Layers[k].shape     
+        grads = gr.grads(self.op_dict,self.indices,shapes,False,*self.g_elements)
+        self.Grads = grads.get_diffs()
+        self.Grad_ind = grads.get_indices()
+        del shapes
+    
     def Print_Arch (self,N_dims):
         # Print network Hidden layers dims, the complite expression of the output, layer shapes and indices 
         # for Einstein summation. Note if we have a rank 2 tensor operatedwith a rank 1 tensor (vector) 
@@ -156,12 +170,16 @@ class FCN: # Fully Connected Network
         for i in range (len(self.indices)):
             print(self.indices[i])
         print()
+        print('Network Gradients')
+        for i in self.Grads.keys():
+            print(i,':',self.Grads[i])
+        print()
+        print(self.Grad_ind)
         print('Network constructed')
         print('############################################')
         print()
         
-    #def grads(self):
-        
+# ----------------- END OF CLASS ----------------- #        
 
 # Pass network layer architecture as a list of strings. Final element is the shape of the output. 
 # If only one element is passed in args, that element is the shape of the output. If args is 
@@ -169,8 +187,8 @@ class FCN: # Fully Connected Network
 # can be separated by any character or symbol other than intigers, #, ' or " (depenting on which one
 # you ue to enclose the string). So 12:5 and 12.5 and 12>5 and 12a5 and 12 5 will result in the same layer shape.
    
-args = ['5:4','15','5:4:10:3','6:5']
-#args = ['3','5']
+#args = ['5:4','15','5:4:10:3','6:5']
+args = ['3:5','5:3']
 #args = ['3']
 #args = []
 

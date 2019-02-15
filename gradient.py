@@ -6,7 +6,6 @@ Created on Tue Jan 15 16:46:34 2019
 """
 # This is not the final grad class.
 
-import numpy as np
 import sympy as sy
 import re
 
@@ -22,12 +21,11 @@ class grads:
         self.h_layers = {}
         
         # Create all tensors of the network
-        for i in Shapes.keys():
+        for i in shapes.keys():
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
         self.operants['Err'] = sy.IndexedBase('Err',shape=shapes[list(shapes.keys())[-1]])
-        
-        self.ind_strc(indices)
+        self.ind_strc(indices,shapes)
         self.operations(op_dict)
         Err, E = self.Error(shapes)
         self.Diff(Err,E,shapes,*g_elmnts)
@@ -38,7 +36,7 @@ class grads:
     def get_indices(self):
         return self.ind_dict_einsum
         
-    def ind_strc(self,indices):
+    def ind_strc(self,indices,shapes):
         # Create all index structures. Create the first layer outside of the loop
         # and the remaining inside a loop. This is because the numbering of the 
         # indices is unconstrained for the first layer, but it is constrained for the
@@ -77,19 +75,21 @@ class grads:
             self.ind_dict_einsum["W{0}".format(i)] = indices[i][:index1] +  self.ind_dict_einsum["H{0}".format(i)]
             
         # Create the output layer and Err index structure from the uncontracted structure of the last W.
-        h_ind = self.ind_dict["H{0}".format(i)]
-        w_ind = self.ind_dict["W{0}".format(i)]
+        layer_no = len(indices)
+        h_ind = self.ind_dict["H{0}".format(layer_no-1)]
+        w_ind = self.ind_dict["W{0}".format(layer_no-1)]
         unco_ind = [x for x in w_ind if x not in h_ind]
-        self.ind_dict["H{0}".format(i+1)] = unco_ind
+        self.ind_dict["H{0}".format(layer_no)] = unco_ind
         unco_ind_einsum = ''
         for j in unco_ind : unco_ind_einsum += j[0]
-        self.ind_dict_einsum["H{0}".format(i+1)] = unco_ind_einsum
+        self.ind_dict_einsum["H{0}".format(layer_no)] = unco_ind_einsum
         self.ind_dict['Err'] = unco_ind
+        del layer_no
         
         # Create Bias Tensors. We do not create them in previous loop. First we create a list
         # of there keys. This is because we, might have chosen not to include biases
         # to all layers, or even any at all.
-        B_key_list = [x for x in Shapes.keys() if x[0] == 'B']
+        B_key_list = [x for x in shapes.keys() if x[0] == 'B']
         for i in B_key_list:
             j = str(int(i[1:])+1)
             self.ind_dict[i] = self.ind_dict['H'+j]
@@ -146,18 +146,18 @@ class grads:
         else:
             g_elmnts = list(self.operants.keys())
             for j in reversed(g_elmnts):
-                if j[0]=='H' : g_elmnts.remove(j)
+                if j[0]=='H' or j=='Err' : g_elmnts.remove(j)
             h_keys = list(self.h_layers.keys())
-            
+        
         # Substitute all terms in Error term. 
-        for k in (h_keys[:-1]):
+        for k in reversed(h_keys[:-1]):
             sub = self.operants[k][self.ind_dict[k]]
             E = E.subs(sub,self.h_layers[k])
-        # Differetiate   
+            
+        # Differetiate  
         for i in g_elmnts:
             dx = self.operants[i][self.ind_dict[i]]
             G = sy.diff(E,dx)
-            
             # Here we substitute back H terms H_net terms the Err term and supress the indices, to symblify.
             for k in (h_keys):
                 sub = self.h_layers[k]
@@ -170,7 +170,7 @@ class grads:
             for k in list(self.operants.keys()):
                 G = G.subs(self.operants[k][self.ind_dict[k]],self.operants[k])
             self.grads_dict[i] = G
-        
+
         # We substitute the act. func. and impicite derivative terms. For this we will convert the 
         # equations to python strings and manipulate.
         for k in self.grads_dict.keys():
@@ -180,12 +180,15 @@ class grads:
 
             for i in reversed(sub_pos):
                 H_pos = op_exp.find('H',i)
-                delim = op_exp.find('_',H_pos)
-                H_key = op_exp[H_pos:delim]
-                ind_end = op_exp.find(',',H_pos)
-                func = sy.printing.str.sstrrepr(self.act_funcs[H_key])
-                oprnt = op_exp[H_pos:ind_end]
-                sub_exp = '@d_1' + func + '/' + oprnt + sub_exp # Use @ to designate element wise multiplication.
+                if op_exp[H_pos+1]=='0':
+                    pass
+                else:
+                    delim = op_exp.find('_',H_pos)
+                    H_key = op_exp[H_pos:delim]
+                    ind_end = op_exp.find(',',H_pos)
+                    func = sy.printing.str.sstrrepr(self.act_funcs[H_key])
+                    oprnt = op_exp[H_pos:ind_end]
+                    sub_exp = '@d_1' + func + '/' + oprnt + sub_exp # Use @ to designate element wise multiplication.
             op_exp = op_exp[:sub_pos[0]-1] + sub_exp
             self.grads_dict[k] = op_exp
 
@@ -195,6 +198,7 @@ class grads:
         ''' 
             TO DO
         '''
+        
         # substitude any scalar multiplications represented by * and not by @. Remember we might get terms from
         # the activation functions.
         delim = ['*','@']
@@ -304,9 +308,11 @@ class grads:
         for i in self.grads_dict.keys():
             print(i,':',self.grads_dict[i])
             print()
-            
+        print('########## End of Grad Dicts ##########')
+           
 # ----------------- END OF CLASS ----------------- #
-            
+'''
+import numpy as np       
 # Example input
 W0 = np.arange(450.).reshape((3,5,6,5))
 H0 = np.arange(30.).reshape((6,5))
@@ -319,11 +325,10 @@ T = np.arange(15.).reshape((5,3))
 Net_op_dic = {'H1': 'sigm(W0*H0+B0)', 'H2': 'sigm(W1*H1+B1)'}
 Indices = ['ABab,ab->AB','abAB,AB->ab']
 Shapes = {'H0':(6,5),'W0':(3,5,6,5),'B0':(3,5),'W1':(5,3,3,5),'H1':(3,5),'B1':(5,3),'H2':(5,3)}
-g_elements = ['W0','B0','W1','B1']
+g_elements = []
          
 gradient = grads(Net_op_dic,Indices,Shapes,False,*g_elements)
 Gs = gradient.get_diffs()
 for i in Gs.keys():
     print(i, ':', Gs[i], '\n')
-
-
+'''
