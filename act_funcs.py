@@ -92,7 +92,7 @@ class act_funcs:
         elif order == 1:
             d = np.subtract(data,m)
             Exp = np.exp(np.divide(np.multiply(d,d),-a))
-            data = np.divide(np.multiply(-2*a*s,np.multiply(Exp,d)),a)
+            data = np.divide(np.multiply(-2*s,np.multiply(Exp,d)),a)
             del d, Exp
         del s,m,a
         return data
@@ -120,7 +120,7 @@ class act_funcs:
         elif order == 1:
             d = np.subtract(data,m)
             Exp = np.exp(np.divide(np.multiply(d,d),-a))
-            data = np.divide(np.multiply(2*a*s,np.multiply(Exp,d)),a)
+            data = np.divide(np.multiply(2*s,np.multiply(Exp,d)),a)
             del d, Exp
         del s,m,a
         return data
