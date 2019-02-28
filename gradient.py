@@ -25,6 +25,7 @@ class grads:
             operant = sy.IndexedBase(i,shape=shapes[i])
             self.operants[i] = operant
         self.operants['Err'] = sy.IndexedBase('Err',shape=shapes[list(shapes.keys())[-1]])
+        
         self.ind_strc(indices,shapes)
         self.operations(op_dict)
         Err, E = self.Error(shapes)
@@ -140,7 +141,7 @@ class grads:
     
     def Diff(self,Err,E,shapes,*g_elmnts):
         # Differentiate the error with respect to each element we asked for its gradient, through the g_elements list.
-        # If list is not passed we compute the gradient of all operants exept the H terms.
+        # If list is not passed we compute the gradient of all operants exept the H terms and Err.
         if g_elmnts:
             h_keys = list(self.h_layers.keys())
         else:
@@ -159,12 +160,16 @@ class grads:
             dx = self.operants[i][self.ind_dict[i]]
             G = sy.diff(E,dx)
             # Here we substitute back H terms H_net terms the Err term and supress the indices, to symblify.
+            # Note: The full expression of a single layer network could be sigm(W0[A,B,c]*H0[A,B]+B[c]). When 
+            # substituting terms we need to substitute W0[A,B,c] with W0. That is why in the G.sub we have
+            # the term self.operants[k][self.ind_dict[k]]; self.operants[k] gives the W0 and [self.ind_dict[k]]
+            # gives the indices e.g. [A,B,c].
             for k in (h_keys):
                 sub = self.h_layers[k]
                 G = G.subs(sub,self.operants[k][self.ind_dict[k]])
             for k in (h_keys):
                 sub = self.layers_net[k]
-                G = G.subs(sub,sy.IndexedBase((k+'_net'),shape=shapes[k]))
+                G = G.subs(sub,sy.IndexedBase((k+'_'),shape=shapes[k])) # We create temporarily the _net terms as we do not have them stored.
             Err = Err.subs(self.h_layers[h_keys[-1]],self.operants[h_keys[-1]][self.ind_dict[h_keys[-1]]])
             G = G.subs(Err,sy.IndexedBase('Err',shape=shapes[h_keys[-1]])[self.ind_dict[h_keys[-1]]])
             for k in list(self.operants.keys()):
@@ -180,7 +185,7 @@ class grads:
 
             for i in reversed(sub_pos):
                 H_pos = op_exp.find('H',i)
-                if op_exp[H_pos+1]=='0':    # No need for substitution ofthe input layer H0
+                if op_exp[H_pos+1]=='0':    # No need for substitution of the input layer H0
                     pass
                 else:
                     delim = op_exp.find('_',H_pos)
@@ -197,7 +202,7 @@ class grads:
 
                     func = sy.printing.str.sstrrepr(self.act_funcs[H_key])
                     oprnt = op_exp[H_pos:ind_end]
-                    sub_exp = '@d_1' + func + '/' + oprnt + sub_exp # Use @ to designate element wise multiplication.
+                    sub_exp = '@d1_' + func + '|' + oprnt + sub_exp # Use @ to designate element wise multiplication.
             op_exp = op_exp[:sub_pos[0]-1] + sub_exp
             self.grads_dict[k] = op_exp
 
@@ -213,10 +218,10 @@ class grads:
         delim = ['*','@']
         for k in self.grads_dict.keys():
             op_pos = 0
-            # Find an operation in the string weather it is * or @. Find the tearms around it. The
+            # Find an operation in the string weather it is * or @. Find the terms around it. The
             # second tearm will be the rest of the equation from the position of the operation to 
             # the end. We find in this new string the next operation and deduct the operant coresponding
-            # to the first operation. Check if both terms are tensor or not. If not an the operation
+            # to the first operation. Check if both terms are tensors or not. If not and the operation
             # is * change it to @.
             while op_pos >= 0: # while we get valeus other than -1 we contineu searching the string.
                 op_s = 0
@@ -248,51 +253,6 @@ class grads:
                 print('----------')
             print('########## Next key ##########')
             '''
-            
-        # Convert the strings to python code to be executed in exec
-        ''' We will make the convertion in the network class
-        
-        delim = ['*','@','/']
-        for k in self.grads_dict.keys():
-            new_op = ''
-            #[m.start() for m in re.finditer('\*', self.grads_dict[k])]
-            op_pos = 0
-            while op_pos >= 0:
-                print(k,':',self.grads_dict[k])
-                print()
-                op_s = 0
-                old_pos = op_pos
-                op_pos = 0
-                while op_s < len(delim)-1 and op_pos <= 0:
-                    op_pos = self.grads_dict[k].find(delim[op_s],old_pos+1)
-                    op_s +=1
-                print('delim',op_s,'old pos',old_pos,'new pos',op_pos)
-                term1 = self.grads_dict[k][old_pos:op_pos]
-                if term1[0] in delim: term1 = term1[1:]
-                term2 = self.grads_dict[k][op_pos+1:]
-                print('Terms to process=',term1,'|',term2)
-                stop = -1
-                s = 0
-                while s < len(delim)-1 and stop < 0:
-                    stop = term2.find(delim[s])
-                    s += 1
-                print('s:',s,'stop:', stop)
-                term2 = term2[:stop]
-                print('Terms to replace=', term1,'|',term2)
-                if term1 in self.operants.keys() and term2 in self.operants.keys():
-                    print('E skile')
-                    if len(new_op) < 1: operant = 'np.einsum(' + term1 + ',' + term2 + ')'
-                    else: new_op = 'np.einsum(' + new_op + ',' + term2 + ')'
-                else:
-                    print('Scalar Mul')
-                    if len(new_op) < 1: operant = 'np.multiply(' + term1 + ',' + term2 + ')'
-                    else: new_op = 'np.multiply(' + new_op + ',' + term2 + ')'
-                print(new_op)
-                print('----------')
-            print('########## Next key ##########')     
-            
-        print('*****  End *****')
-        '''
         
     def Print(self,Err,E):
         print('########## Grad class dictionaries ##########')
@@ -320,9 +280,10 @@ class grads:
         print('########## End of Grad Dicts ##########')
            
 # ----------------- END OF CLASS ----------------- #
+        
 '''
 import numpy as np       
-# Example input
+# Example input for testing
 W0 = np.arange(450.).reshape((3,5,6,5))
 H0 = np.arange(30.).reshape((6,5))
 B0 = np.arange(15.).reshape((3,5))
