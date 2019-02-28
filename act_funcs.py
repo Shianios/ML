@@ -36,8 +36,8 @@ class act_funcs:
                 else: kwargs['m'] = 0.
                 if 'a' in params: kwargs['a'] = params.get('a')
                 else: kwargs['a'] = 1.
-            result = func(*args,**kwargs)
-            return result      
+                del params
+            return func(*args,**kwargs)     
         return extract
     
     @staticmethod
@@ -117,7 +117,4 @@ print(res2)
 print(res3)
 print(res4)
 '''
-
-
-
 
