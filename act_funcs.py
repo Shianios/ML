@@ -5,7 +5,6 @@ Created on Wed Sep 26 18:05:33 2018
 @author: Loizos Shianios
 """
 import numpy as np
-#import pandas as pd
 
 class act_funcs:
     def __init__(self,data,**kwargs):
